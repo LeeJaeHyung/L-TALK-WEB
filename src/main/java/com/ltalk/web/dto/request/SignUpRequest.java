@@ -1,4 +1,4 @@
-package com.ltalk.web.request;
+package com.ltalk.web.dto.request;
 
 import lombok.Data;
 import lombok.Getter;

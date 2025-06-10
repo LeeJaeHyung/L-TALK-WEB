@@ -1,20 +1,25 @@
 package com.ltalk.web.service;
 
+import com.ltalk.web.dto.LoginMemberDto;
 import com.ltalk.web.entity.Member;
 import com.ltalk.web.repository.MemberRepository;
-import com.ltalk.web.request.SignUpRequest;
+import com.ltalk.web.dto.request.LoginRequest;
+import com.ltalk.web.dto.request.SignUpRequest;
 import org.springframework.stereotype.Service;
 
-import static com.ltalk.web.util.PasswordEncoder.encode;
-import static com.ltalk.web.util.PasswordEncoder.generateSalt;
+import java.util.UUID;
+
+import static com.ltalk.web.util.PasswordEncoder.*;
 
 @Service
 public class MemberService {
 
-    private MemberRepository memberRepository;
+    private final MemberRepository memberRepository;
+    private final RedisLoginTokenService redisLoginTokenService;
 
-    public MemberService(MemberRepository memberRepository) {
+    public MemberService(MemberRepository memberRepository, RedisLoginTokenService redisLoginTokenService) {
         this.memberRepository = memberRepository;
+        this.redisLoginTokenService = redisLoginTokenService;
     }
 
     public void signUp(SignUpRequest request) {
@@ -29,4 +34,32 @@ public class MemberService {
         }
         // salt 와 hashedPassword 저장
     }
+
+    public String login(LoginRequest request) {
+        Member member = memberRepository.findByUserName(request.getUserName())
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다"));
+
+        String hashedPassword = member.getPassword();
+        String salt = member.getSalt();
+
+        if (comparePassword(request.getPassword(), salt, hashedPassword)) {
+            //토큰 생성
+            String token = UUID.randomUUID().toString();
+
+            // Redis에 로그인 정보 저장
+            LoginMemberDto dto = new LoginMemberDto(
+                    member.getId(),
+                    member.getUserName(),
+                    member.getNickName(),
+                    member.getUserRole().name()
+            );
+
+            redisLoginTokenService.save(token, dto); // Duration 설정 포함됨
+            return token;
+        } else {
+            throw new IllegalArgumentException("비밀번호가 일치하지 않습니다");
+        }
+    }
+
+
 }

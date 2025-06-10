@@ -19,18 +19,18 @@ public class PasswordEncoder {
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
 
-            // salt + password 조합
+            // salt + password
             String combined = salt + password;
             byte[] hash = md.digest(combined.getBytes(StandardCharsets.UTF_8));
 
-            // Base64 인코딩 (or hex 인코딩도 가능)
+            // Base64 인코딩
             return Base64.getEncoder().encodeToString(hash);
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException("SHA-256 알고리즘을 찾을 수 없습니다", e);
         }
     }
 
-    public static boolean compare(String password, String salt, String hash) {
+    public static boolean comparePassword(String password, String salt, String hash) {
         return hash.equals(encode(password, salt));
     }
 }

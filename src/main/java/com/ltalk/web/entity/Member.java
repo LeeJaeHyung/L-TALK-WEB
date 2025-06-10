@@ -1,13 +1,15 @@
 package com.ltalk.web.entity;
 
 import com.ltalk.web.enums.UserRole;
-import com.ltalk.web.request.SignUpRequest;
+import com.ltalk.web.dto.request.SignUpRequest;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Entity
 @Getter
+@ToString
 @NoArgsConstructor  // JPA는 기본 생성자가 꼭 필요해!
 public class Member {
 
@@ -18,7 +20,7 @@ public class Member {
     @Column(nullable = false, unique = true) // 중복 방지
     private String userName;
 
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String nickName;
 
     @Column(nullable = false)
@@ -32,6 +34,8 @@ public class Member {
 
     @Column(nullable = false)
     private String phoneNumber;
+
+
 
     @Enumerated(EnumType.STRING) // Enum 저장 시 이름(문자열)으로 저장
     private UserRole userRole;
