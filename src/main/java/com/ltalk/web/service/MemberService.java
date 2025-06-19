@@ -1,12 +1,17 @@
 package com.ltalk.web.service;
 
 import com.ltalk.web.dto.LoginMemberDto;
+import com.ltalk.web.dto.LoginResult;
 import com.ltalk.web.entity.Member;
 import com.ltalk.web.repository.MemberRepository;
 import com.ltalk.web.dto.request.LoginRequest;
 import com.ltalk.web.dto.request.SignUpRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.ui.Model;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static com.ltalk.web.util.PasswordEncoder.*;
@@ -35,7 +40,7 @@ public class MemberService {
         // salt 와 hashedPassword 저장
     }
 
-    public String login(LoginRequest request) {
+    public LoginResult login(LoginRequest request) {
         Member member = memberRepository.findByUserName(request.getUserName())
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다"));
 
@@ -54,8 +59,8 @@ public class MemberService {
                     member.getUserRole().name()
             );
 
-            redisLoginTokenService.save(token, dto); // Duration 설정 포함됨
-            return token;
+            redisLoginTokenService.save(token, dto);// Duration 설정 포함됨
+            return new LoginResult(token, dto);
         } else {
             throw new IllegalArgumentException("비밀번호가 일치하지 않습니다");
         }
