@@ -32,7 +32,7 @@ public class MemberController {
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@ModelAttribute LoginRequest request, HttpServletResponse response) {
-        LoginResult result = memberService.login(request); // Redis에 저장됨
+        LoginResult result = memberService.login(request);// Redis에 저장됨
         // 쿠키 생성 및 설정
         Cookie cookie = new Cookie("access_token", result.getToken());
         cookie.setHttpOnly(true); // JavaScript로 접근 불가능 (XSS 방어)
