@@ -31,7 +31,7 @@ public class FriendController {
         return ResponseEntity.ok(friendService.getFriendList((LoginMemberDto)request.getAttribute("member")));
     }
 
-    @GetMapping("/request")
+    @GetMapping("/requests")
     @ResponseBody
     public ResponseEntity<FriendRequestListResponse> getRequestFriendList(HttpServletRequest request){
        return ResponseEntity.ok(friendService.getRequestFriendList(((LoginMemberDto)request.getAttribute("member")).getId()));

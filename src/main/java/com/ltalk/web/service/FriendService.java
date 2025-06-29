@@ -32,12 +32,17 @@ public class FriendService {
     }
 
     public RequestFriendResponse requestFriend(Long fromMemberId, Long toMemberId) {
-        Member fromMember = memberRepository.findById(fromMemberId).orElseThrow();
-        System.out.println("fromMember 조회");
-        Member toMember = memberRepository.findById(toMemberId).orElseThrow();
-        System.out.println("toMember 조회");
-        Friend friend = new Friend(fromMember, toMember, FriendStatus.REQUESTED);
-        return new RequestFriendResponse(friendRepository.save(friend));
+        Friend responseFriend = null;
+        //이미 친구 상태인지 확인
+        if(friendRepository.existsByFromMemberIdAndToMemberIdOrToMemberIdAndFromMemberId(fromMemberId, toMemberId, fromMemberId, toMemberId)){
+            Member fromMember = memberRepository.findById(fromMemberId).orElseThrow();
+            System.out.println("fromMember 조회");
+            Member toMember = memberRepository.findById(toMemberId).orElseThrow();
+            System.out.println("toMember 조회");
+            Friend friend = new Friend(fromMember, toMember, FriendStatus.REQUESTED);
+            return new RequestFriendResponse(friendRepository.save(friend));
+        }
+        throw new IllegalArgumentException("친구요청을 신청할 수 없는 상태 입니다.");
     }
 
     public FriendRequestListResponse getRequestFriendList(Long memberid) {
