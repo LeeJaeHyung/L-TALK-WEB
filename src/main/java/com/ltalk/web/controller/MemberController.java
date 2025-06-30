@@ -7,12 +7,19 @@ import com.ltalk.web.dto.request.SignUpRequest;
 import com.ltalk.web.service.MemberService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Controller
 public class MemberController {
@@ -51,12 +58,35 @@ public class MemberController {
         return "sign-up";
     }
 
+
     @PostMapping("/sign-up")
-    public String signUp(@ModelAttribute SignUpRequest request){
-        System.out.println(request);
+    public String signUp(@Valid @ModelAttribute SignUpRequest request, BindingResult bindingResult) {
+        if (bindingResult.hasErrors()) {
+            StringBuilder message = new StringBuilder();
+            for (FieldError error : bindingResult.getFieldErrors()) {
+                message.append(error.getField())
+                        .append(": ")
+                        .append(error.getDefaultMessage())
+                        .append("\n");
+            }
+            return "redirect:/sign-up?message=" + URLEncoder.encode(message.toString(), StandardCharsets.UTF_8);
+        }
+
         memberService.signUp(request);
-        return "login";
+        return "redirect:/login?message=" + URLEncoder.encode("회원가입이 완료되었습니다!", StandardCharsets.UTF_8);
     }
+
+    @GetMapping("/users/check-username")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> duplicateUsername(@RequestParam String username) {
+        boolean exists = memberService.duplicateUsername(username);
+        Map<String, Object> response = new HashMap<>();
+        response.put("exists", exists);
+        response.put("message", exists ? "이미 사용 중인 아이디입니다." : "사용 가능한 아이디입니다.");
+        System.out.println(exists);
+        return ResponseEntity.ok(response);
+    }
+
 
 
 }

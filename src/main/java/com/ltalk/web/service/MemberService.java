@@ -36,6 +36,7 @@ public class MemberService {
             memberRepository.save(member);
         }else{
             System.out.println("이미 맴버 존재");
+            throw new IllegalArgumentException("아이디와 닉네임 이메일을 다시한번 중복 확인해주세요.");
         }
         // salt 와 hashedPassword 저장
     }
@@ -67,4 +68,7 @@ public class MemberService {
     }
 
 
+    public boolean duplicateUsername(String username) {
+        return memberRepository.existsByUserName(username);
+    }
 }

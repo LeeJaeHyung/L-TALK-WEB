@@ -34,7 +34,7 @@ public class FriendService {
     public RequestFriendResponse requestFriend(Long fromMemberId, Long toMemberId) {
         Friend responseFriend = null;
         //이미 친구 상태인지 확인
-        if(friendRepository.existsByFromMemberIdAndToMemberIdOrToMemberIdAndFromMemberId(fromMemberId, toMemberId, fromMemberId, toMemberId)){
+        if(!friendRepository.existsByFromMemberIdAndToMemberIdOrToMemberIdAndFromMemberId(fromMemberId, toMemberId, fromMemberId, toMemberId)){
             Member fromMember = memberRepository.findById(fromMemberId).orElseThrow();
             System.out.println("fromMember 조회");
             Member toMember = memberRepository.findById(toMemberId).orElseThrow();
