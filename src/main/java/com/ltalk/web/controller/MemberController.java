@@ -1,9 +1,8 @@
 package com.ltalk.web.controller;
 
 import com.ltalk.web.dto.LoginResult;
+import com.ltalk.web.dto.request.*;
 import com.ltalk.web.dto.response.LoginResponse;
-import com.ltalk.web.dto.request.LoginRequest;
-import com.ltalk.web.dto.request.SignUpRequest;
 import com.ltalk.web.service.MemberService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
@@ -78,8 +77,9 @@ public class MemberController {
 
     @GetMapping("/users/check-username")
     @ResponseBody
-    public ResponseEntity<Map<String, Object>> duplicateUsername(@RequestParam String username) {
-        boolean exists = memberService.duplicateUsername(username);
+    public ResponseEntity<Map<String, Object>> duplicateUsername(@Valid @ModelAttribute UsernameCheckRequest request) {
+        System.out.println("시작했어?");
+        boolean exists = memberService.duplicateUsername(request.getUsername());
         Map<String, Object> response = new HashMap<>();
         response.put("exists", exists);
         response.put("message", exists ? "이미 사용 중인 아이디입니다." : "사용 가능한 아이디입니다.");
@@ -87,6 +87,25 @@ public class MemberController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/users/check-email")
+    public ResponseEntity<Map<String, Object>> duplicateEmail(@Valid @ModelAttribute EmailCheckRequest request) {
+        boolean exists = memberService.duplicateEmail(request.getEmail());
+        Map<String, Object> response = new HashMap<>();
+        response.put("exists", exists);
+        response.put("message", exists ? "이미 사용 중인 이메일입니다." : "사용 가능한 아이디입니다.");
+        System.out.println(exists);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/users/check-nickname")
+    public ResponseEntity<Map<String, Object>> duplicateNickName(@Valid @ModelAttribute NicknameCheckRequest request) {
+        boolean exists = memberService.duplicateNickName(request.getNickname());
+        Map<String, Object> response = new HashMap<>();
+        response.put("exists", exists);
+        response.put("message", exists ? "이미 사용 중인 닉네임입니다." : "사용 가능한 아이디입니다.");
+        System.out.println(exists);
+        return ResponseEntity.ok(response);
+    }
 
 
 }
