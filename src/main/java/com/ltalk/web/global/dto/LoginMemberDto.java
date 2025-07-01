@@ -1,4 +1,4 @@
-package com.ltalk.web.dto;
+package com.ltalk.web.global.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

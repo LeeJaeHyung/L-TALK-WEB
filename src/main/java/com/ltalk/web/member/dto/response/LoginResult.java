@@ -1,5 +1,6 @@
-package com.ltalk.web.dto;
+package com.ltalk.web.member.dto.response;
 
+import com.ltalk.web.global.dto.LoginMemberDto;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
