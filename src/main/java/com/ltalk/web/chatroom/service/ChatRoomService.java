@@ -7,6 +7,7 @@ import com.ltalk.web.chatroom.repository.ChatRoomRepository;
 import com.ltalk.web.global.dto.LoginMemberDto;
 import com.ltalk.web.member.domain.Member;
 import com.ltalk.web.member.repository.MemberRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -22,6 +23,7 @@ public class ChatRoomService {
     @Autowired
     private ChatRoomRepository chatRoomRepository;
 
+    @Transactional
     public void createChatRoom(LoginMemberDto member, ChatRoomCreateRequest chatRoomCreateRequest) {
         // 1. 참여자 ID 리스트 가져오기
         List<Long> participantIds = new ArrayList<>(chatRoomCreateRequest.getMemberIds());
