@@ -7,7 +7,6 @@ import com.ltalk.web.member.domain.Member;
 import com.ltalk.web.member.dto.request.LoginRequest;
 import com.ltalk.web.member.dto.request.SignUpRequest;
 import com.ltalk.web.member.dto.response.LoginResult;
-
 import com.ltalk.web.member.repository.MemberRepository;
 import org.springframework.stereotype.Service;
 

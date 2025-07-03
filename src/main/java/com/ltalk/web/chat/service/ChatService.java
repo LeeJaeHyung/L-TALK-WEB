@@ -7,8 +7,6 @@ import com.ltalk.web.chatroom.domain.ChatRoom;
 import com.ltalk.web.chatroom.domain.ChatRoomMember;
 import com.ltalk.web.chatroom.repository.ChatRoomMemberRepository;
 import com.ltalk.web.chatroom.repository.ChatRoomRepository;
-import com.ltalk.web.member.domain.Member;
-import com.ltalk.web.member.repository.MemberRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
