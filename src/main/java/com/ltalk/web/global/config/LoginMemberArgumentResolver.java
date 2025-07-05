@@ -34,23 +34,7 @@ public class LoginMemberArgumentResolver implements HandlerMethodArgumentResolve
                                   WebDataBinderFactory binderFactory) throws Exception {
 
         HttpServletRequest request = (HttpServletRequest) webRequest.getNativeRequest();
-
-        Cookie[] cookies = request.getCookies();
-        String token = null;
-        if (cookies != null) {
-            for (Cookie cookie : cookies) {
-                if ("access_token".equals(cookie.getName())) {
-                    token = cookie.getValue();
-                    break;
-                }
-            }
-        }
-
-        if (token == null) {
-            throw new RuntimeException("Access token not found");
-        }
-
-        LoginMemberDto loginDto = redisLoginTokenService.get(token);
+        LoginMemberDto loginDto =(LoginMemberDto)request.getAttribute("member");
         if (loginDto == null) {
             throw new RuntimeException("Invalid token or session expired");
         }
