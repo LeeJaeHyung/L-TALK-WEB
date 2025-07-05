@@ -1,5 +1,7 @@
 package com.ltalk.web.member.controller;
 
+import com.ltalk.web.global.config.LoginMember;
+import com.ltalk.web.member.domain.Member;
 import com.ltalk.web.member.dto.request.*;
 import com.ltalk.web.member.dto.response.LoginResponse;
 import com.ltalk.web.member.dto.response.LoginResult;
@@ -11,10 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -106,6 +105,12 @@ public class MemberController {
         response.put("message", exists ? "이미 사용 중인 닉네임입니다." : "사용 가능한 아이디입니다.");
         System.out.println(exists);
         return ResponseEntity.ok(response);
+    }
+
+    @PatchMapping("/users/me")
+    public ResponseEntity<Member> updateMyInfo(@LoginMember Member member){
+        System.out.println(member);
+        return ResponseEntity.ok(member);
     }
 
 
