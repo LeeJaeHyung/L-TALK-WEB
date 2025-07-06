@@ -33,6 +33,7 @@ public class AuthInterceptor implements HandlerInterceptor {
         if (cookies != null) {
             for (Cookie cookie : cookies) {
                 if ("access_token".equals(cookie.getName())) {
+                    System.out.println("토큰 존재: " + cookie.getValue());
                     token = cookie;
                     loginMemberDto = redisLoginTokenService.get(token.getValue());
                     break;
@@ -44,7 +45,7 @@ public class AuthInterceptor implements HandlerInterceptor {
             // 인증된 사용자면 request에 담고 다음으로
             request.setAttribute("member", loginMemberDto);
             return true;
-        }else{
+        }else if(token!=null){
             token.setMaxAge(0);
             token.setPath("/"); // 중요! 생성 시 path와 같아야 삭제됨
             response.addCookie(token);

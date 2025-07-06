@@ -34,4 +34,9 @@ public class RedisLoginTokenService {
         if (json == null) return null;
         return gson.fromJson(json, LoginMemberDto.class);
     }
+
+    public void remove(String token, Long memberId) {
+        redisTemplate.delete("access_token:"+token);
+        redisTemplate.delete("member_id:" + memberId);
+    }
 }

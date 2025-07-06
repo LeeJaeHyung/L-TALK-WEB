@@ -7,6 +7,7 @@ import com.ltalk.web.member.dto.response.LoginResponse;
 import com.ltalk.web.member.dto.response.LoginResult;
 import com.ltalk.web.member.service.MemberService;
 import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -100,6 +101,7 @@ public class MemberController {
     @GetMapping("/users/check-nickname")
     public ResponseEntity<Map<String, Object>> duplicateNickName(@Valid @ModelAttribute NicknameCheckRequest request) {
         boolean exists = memberService.duplicateNickName(request.getNickname());
+        System.out.println(request.getNickname());
         Map<String, Object> response = new HashMap<>();
         response.put("exists", exists);
         response.put("message", exists ? "이미 사용 중인 닉네임입니다." : "사용 가능한 아이디입니다.");
@@ -108,9 +110,18 @@ public class MemberController {
     }
 
     @PatchMapping("/users/me")
-    public ResponseEntity<Member> updateMyInfo(@LoginMember Member member){
+    public ResponseEntity<Member> updateMyInfo(@LoginMember Member member, @RequestBody MemberPatchRequest memberPatchRequest){
+        System.out.println(memberPatchRequest);
         System.out.println(member);
-        return ResponseEntity.ok(member);
+        Member updateMember = memberService.updateMyInfo(member, memberPatchRequest);
+        return ResponseEntity.ok(updateMember);
+    }
+
+    @DeleteMapping("/users/me")
+    public ResponseEntity<String> deleteMyInfo(@LoginMember Member member, HttpServletRequest request, HttpServletResponse response){
+        memberService.deleteMyInfo(member, request, response);
+
+        return ResponseEntity.ok("정상적으로 회원 정보가 지워졌습니다.");
     }
 
 

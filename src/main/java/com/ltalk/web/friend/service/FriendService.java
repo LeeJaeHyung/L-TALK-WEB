@@ -2,6 +2,7 @@ package com.ltalk.web.friend.service;
 
 import com.ltalk.web.friend.domain.Friend;
 import com.ltalk.web.friend.domain.FriendStatus;
+import com.ltalk.web.friend.dto.request.UpdateFriendRequest;
 import com.ltalk.web.friend.dto.response.FriendListResponse;
 import com.ltalk.web.friend.dto.response.FriendRequestListResponse;
 import com.ltalk.web.friend.dto.response.RequestFriendResponse;
@@ -51,5 +52,28 @@ public class FriendService {
         List<Friend> myRequestList = friendRepository.findByFromMemberIdAndStatus(memberid, FriendStatus.REQUESTED);
         List<Friend> requestByOtherList = friendRepository.findByToMemberIdAndStatus(memberid, FriendStatus.REQUESTED);
         return new FriendRequestListResponse(myRequestList, requestByOtherList);
+    }
+
+    @Transactional
+    public List<Friend> updateFriend(Member member, UpdateFriendRequest request, Long friendId) {
+        Friend friend = friendRepository.findById(friendId).orElseThrow(()-> new IllegalArgumentException("존재하지 않는 데이터입니다."));
+        Long memberId = member.getId();
+        if(memberId.equals(friend.getToMember().getId())||memberId.equals(friend.getFromMember().getId())){
+            friend.setStatus(request.getStatus());
+            List<Friend> friendList = friendRepository.findByFromMemberIdOrToMemberIdAndStatus(memberId, memberId, FriendStatus.ACCEPTED);
+            return friendList;
+        }
+        throw new IllegalArgumentException("접근 가능한 데이터가 아닙니다.");
+    }
+
+    @Transactional
+    public List<Friend> deleteFriend(Member member, Long friendId) {
+        Long memberId = member.getId();
+        Friend friend = friendRepository.findById(friendId).orElseThrow(()-> new IllegalArgumentException("존재 하지 않는 데이터입니다."));
+        if(friend.getFromMember().getId().equals(memberId)||friend.getToMember().getId().equals(memberId)){
+            friend.setStatus(FriendStatus.DELETED);
+            friend.softDelete();
+        }
+        return friendRepository.findByFromMemberIdOrToMemberIdAndStatus(memberId, memberId, FriendStatus.ACCEPTED);
     }
 }
