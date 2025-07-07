@@ -77,6 +77,13 @@ public class MemberController {
         return "redirect:/login?message=" + URLEncoder.encode("회원가입이 완료되었습니다!", StandardCharsets.UTF_8);
     }
 
+    @DeleteMapping("/users/logout")
+    @ResponseBody
+    public ResponseEntity<String> logout(@LoginMember Member member, HttpServletRequest request, HttpServletResponse response) {
+        memberService.logout(member, request, response);
+        return ResponseEntity.ok("로그아웃 성공");
+    }
+
     @GetMapping("/users/me")
     @ResponseBody
     public ResponseEntity<LoginMemberDto> myInfo(HttpServletRequest request){

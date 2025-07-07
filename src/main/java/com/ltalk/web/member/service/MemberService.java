@@ -100,14 +100,21 @@ public class MemberService {
     public void deleteMyInfo(Member member, HttpServletRequest request, HttpServletResponse response) {
         Member target = memberRepository.findById(member.getId()).orElseThrow(()->new IllegalArgumentException("존재하지 않는 멤버입니다."));
         target.softDelete();
+        logout(member, request, response);
+    }
+
+    public void logout(Member member, HttpServletRequest request, HttpServletResponse response) {
         Cookie[] cookies = request.getCookies();
-        for(Cookie token : cookies){
-            if(token.getName().equals("access_token")){
-                token.setMaxAge(0);
-                token.setPath("/"); // 중요! 생성 시 path와 같아야 삭제됨
-                response.addCookie(token);
-                redisLoginTokenService.remove(token.getValue(), member.getId());
+        String token = null;
+        for(Cookie cookie : cookies){
+            if(cookie.getName().equals("access_token")){
+                cookie.setMaxAge(0);
+                cookie.setPath("/"); // 중요! 생성 시 path와 같아야 삭제됨
+                response.addCookie(cookie);
+                token = cookie.getValue();
+                break;
             }
         }
+        redisLoginTokenService.remove(token, member.getId());
     }
 }
