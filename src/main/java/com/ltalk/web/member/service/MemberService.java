@@ -61,6 +61,8 @@ public class MemberService {
                     member.getId(),
                     member.getUserName(),
                     member.getNickName(),
+                    member.getEmail(),
+                    member.getPhoneNumber(),
                     member.getUserRole().name()
             );
 

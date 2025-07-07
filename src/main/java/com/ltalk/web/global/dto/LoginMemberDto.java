@@ -13,6 +13,8 @@ public class LoginMemberDto {
     private Long id;
     private String userName;
     private String nickName;
+    private String email;
+    private String password;
     private String role;
 }
 

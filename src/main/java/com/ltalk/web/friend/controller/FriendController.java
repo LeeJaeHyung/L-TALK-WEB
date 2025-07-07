@@ -48,13 +48,15 @@ public class FriendController {
        return ResponseEntity.ok(friendService.requestFriend(((LoginMemberDto)request.getAttribute("member")).getId(), friendRequest.getToMemberId()));
     }
 
-    @PatchMapping("/{friendId}")
-    public ResponseEntity<List<Friend>> updateFriend(@LoginMember Member member, @RequestBody UpdateFriendRequest request, @PathVariable Long friendId){
-       List<Friend> friendList = friendService.updateFriend(member, request, friendId);
+    @PatchMapping("/{friendId}/accept")
+    @ResponseBody
+    public ResponseEntity<List<Friend>> acceptFriendRequest(@LoginMember Member member, @PathVariable Long friendId){
+       List<Friend> friendList = friendService.acceptFriendRequest(member, friendId);
        return ResponseEntity.ok(friendList);
     }
 
     @DeleteMapping("/{friendId}")
+    @ResponseBody
     public ResponseEntity<List<Friend>> deleteFriend(@LoginMember Member member, @PathVariable Long friendId){
         List<Friend> friendList = friendService.deleteFriend(member, friendId);
         return ResponseEntity.ok(friendList);

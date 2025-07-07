@@ -29,7 +29,7 @@ public class FriendService {
 
     public FriendListResponse getFriendList(LoginMemberDto loginMemberDto) {
         Long memberId = loginMemberDto.getId();
-        List<Friend> friendList = friendRepository.findByFromMemberIdOrToMemberIdAndStatus(memberId,memberId, FriendStatus.ACCEPTED);
+        List<Friend> friendList = friendRepository.findAcceptedFriends(memberId, FriendStatus.ACCEPTED);
         return new FriendListResponse(friendList);
     }
 
@@ -37,10 +37,10 @@ public class FriendService {
     public RequestFriendResponse requestFriend(Long fromMemberId, Long toMemberId) {
         Friend responseFriend = null;
         //이미 친구 상태인지 확인
-        if(!friendRepository.existsByFromMemberIdAndToMemberIdOrToMemberIdAndFromMemberId(fromMemberId, toMemberId, fromMemberId, toMemberId)){
+        if(!friendRepository.existsFriendRelation(fromMemberId, toMemberId)){
             Member fromMember = memberRepository.findById(fromMemberId).orElseThrow();
             System.out.println("fromMember 조회");
-            Member toMember = memberRepository.findById(toMemberId).orElseThrow();
+            Member toMember = memberRepository.findById(toMemberId).orElseThrow(()-> new IllegalArgumentException("존재하지 않는 멤버에게 요청을 보냈습니다."));
             System.out.println("toMember 조회");
             Friend friend = new Friend(fromMember, toMember, FriendStatus.REQUESTED);
             return new RequestFriendResponse(friendRepository.save(friend));
@@ -55,13 +55,12 @@ public class FriendService {
     }
 
     @Transactional
-    public List<Friend> updateFriend(Member member, UpdateFriendRequest request, Long friendId) {
+    public List<Friend> acceptFriendRequest(Member member, Long friendId) {
         Friend friend = friendRepository.findById(friendId).orElseThrow(()-> new IllegalArgumentException("존재하지 않는 데이터입니다."));
         Long memberId = member.getId();
-        if(memberId.equals(friend.getToMember().getId())||memberId.equals(friend.getFromMember().getId())){
-            friend.setStatus(request.getStatus());
-            List<Friend> friendList = friendRepository.findByFromMemberIdOrToMemberIdAndStatus(memberId, memberId, FriendStatus.ACCEPTED);
-            return friendList;
+        if(friend.getStatus()==FriendStatus.REQUESTED&&friend.getToMember().getId().equals(memberId)){
+            friend.setStatus(FriendStatus.ACCEPTED);
+            return friendRepository.findAcceptedFriends(memberId, FriendStatus.ACCEPTED);
         }
         throw new IllegalArgumentException("접근 가능한 데이터가 아닙니다.");
     }
@@ -74,6 +73,6 @@ public class FriendService {
             friend.setStatus(FriendStatus.DELETED);
             friend.softDelete();
         }
-        return friendRepository.findByFromMemberIdOrToMemberIdAndStatus(memberId, memberId, FriendStatus.ACCEPTED);
+        return friendRepository.findAcceptedFriends(memberId, FriendStatus.ACCEPTED);
     }
 }

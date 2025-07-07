@@ -1,6 +1,7 @@
 package com.ltalk.web.member.controller;
 
 import com.ltalk.web.global.config.LoginMember;
+import com.ltalk.web.global.dto.LoginMemberDto;
 import com.ltalk.web.member.domain.Member;
 import com.ltalk.web.member.dto.request.*;
 import com.ltalk.web.member.dto.response.LoginResponse;
@@ -76,6 +77,12 @@ public class MemberController {
         return "redirect:/login?message=" + URLEncoder.encode("회원가입이 완료되었습니다!", StandardCharsets.UTF_8);
     }
 
+    @GetMapping("/users/me")
+    @ResponseBody
+    public ResponseEntity<LoginMemberDto> myInfo(HttpServletRequest request){
+        return ResponseEntity.ok((LoginMemberDto)request.getAttribute("member"));
+    }
+
     @GetMapping("/users/check-username")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> duplicateUsername(@Valid @ModelAttribute UsernameCheckRequest request) {
@@ -123,6 +130,8 @@ public class MemberController {
 
         return ResponseEntity.ok("정상적으로 회원 정보가 지워졌습니다.");
     }
+
+
 
 
 }
