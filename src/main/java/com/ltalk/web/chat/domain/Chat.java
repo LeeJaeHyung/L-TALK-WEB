@@ -4,12 +4,14 @@ import com.ltalk.web.chatroom.domain.ChatRoom;
 import com.ltalk.web.chatroom.domain.ChatRoomMember;
 import jakarta.persistence.*;
 import lombok.Data;
+import org.hibernate.annotations.Where;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
 
+@Where(clause = "deleted = false")
 @Data
 @Entity
 @EntityListeners(AuditingEntityListener.class)
@@ -34,5 +36,8 @@ public class Chat {
     private LocalDateTime createdAt;
     @LastModifiedDate
     private LocalDateTime updatedAt;
+
+    @Column(nullable = false)
+    private boolean deleted = false;
 
 }

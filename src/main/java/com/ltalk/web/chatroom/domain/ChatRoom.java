@@ -3,23 +3,25 @@ package com.ltalk.web.chatroom.domain;
 import com.ltalk.web.chat.domain.Chat;
 import com.ltalk.web.chatroom.dto.request.ChatRoomCreateRequest;
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 @NoArgsConstructor
-@Data
+@Getter
+@Setter
 @Entity
 @EntityListeners(AuditingEntityListener.class)
 public class ChatRoom {
 
-    public ChatRoom(ChatRoomCreateRequest chatRoomCreateRequest, List<ChatRoomMember> chatRoomMembers) {
+    public ChatRoom(ChatRoomCreateRequest chatRoomCreateRequest, Set<ChatRoomMember> chatRoomMembers) {
         this.name = chatRoomCreateRequest.getName();
         this.type = chatRoomCreateRequest.getType();
         this.memberList = chatRoomMembers;
@@ -40,10 +42,11 @@ public class ChatRoom {
     private int participantCount;
 
     @OneToMany(mappedBy = "chatRoom", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<ChatRoomMember> memberList = new ArrayList<>();
+    private Set<ChatRoomMember> memberList = new HashSet<>();
 
     @OneToMany(mappedBy = "chatRoom", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Chat> chatList = new ArrayList<>();
+    private Set<Chat> chatList = new HashSet<>();
+
 
     @CreatedDate
     private LocalDateTime createdAt;

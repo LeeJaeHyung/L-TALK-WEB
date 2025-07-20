@@ -1,6 +1,7 @@
 package com.ltalk.web.member.service;
 
 
+import com.ltalk.web.chatroom.service.ChatRoomService;
 import com.ltalk.web.global.dto.LoginMemberDto;
 import com.ltalk.web.global.service.RedisLoginTokenService;
 import com.ltalk.web.member.domain.Member;
@@ -25,10 +26,12 @@ public class MemberService {
 
     private final MemberRepository memberRepository;
     private final RedisLoginTokenService redisLoginTokenService;
+    private final ChatRoomService chatRoomService;
 
-    public MemberService(MemberRepository memberRepository,RedisLoginTokenService redisLoginTokenService) {
+    public MemberService(MemberRepository memberRepository,RedisLoginTokenService redisLoginTokenService, ChatRoomService chatRoomService) {
         this.memberRepository = memberRepository;
         this.redisLoginTokenService = redisLoginTokenService;
+        this.chatRoomService = chatRoomService;
     }
 
     public void signUp(SignUpRequest request) {
@@ -100,6 +103,7 @@ public class MemberService {
     public void deleteMyInfo(Member member, HttpServletRequest request, HttpServletResponse response) {
         Member target = memberRepository.findById(member.getId()).orElseThrow(()->new IllegalArgumentException("존재하지 않는 멤버입니다."));
         target.softDelete();
+        chatRoomService.deleteAllChatDataForMember(member.getId());
         logout(member, request, response);
     }
 
