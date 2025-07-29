@@ -60,6 +60,7 @@ public class Member {
         this.email = email;
         this.phoneNumber = phoneNumber;
         this.userRole = userRole;
+        this.salt = "";
     }
 
     public Member(SignUpRequest request, String salt) {

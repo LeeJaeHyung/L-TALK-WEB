@@ -7,4 +7,6 @@ import java.util.List;
 
 public interface ChatRepository extends JpaRepository<Chat, Long> {
     List<Chat> findAllBySender_IdIn(List<Long> senderIds);
+
+    List<Chat> findAllBySenderId(Long senderId);
 }

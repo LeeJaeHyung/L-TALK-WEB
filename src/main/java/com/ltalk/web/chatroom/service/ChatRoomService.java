@@ -6,6 +6,7 @@ import com.ltalk.web.chat.repository.ChatRepository;
 import com.ltalk.web.chatroom.domain.ChatRoom;
 import com.ltalk.web.chatroom.domain.ChatRoomMember;
 import com.ltalk.web.chatroom.dto.request.ChatRoomCreateRequest;
+import com.ltalk.web.chatroom.dto.request.ChatRoomExitRequest;
 import com.ltalk.web.chatroom.dto.response.ChatRoomDto;
 import com.ltalk.web.chatroom.dto.response.ChatRoomMemberDto;
 import com.ltalk.web.chatroom.repository.ChatRoomMemberRepository;
@@ -131,11 +132,20 @@ public class ChatRoomService {
 
         List<Long> crmIds = crmList.stream().map(ChatRoomMember::getId).toList();
         List<Chat> chats = chatRepository.findAllBySender_IdIn(crmIds);
+        ChatRoomMember chatRoomMember = chatRoomMemberRepository.findById(12L).orElseThrow();
         for (Chat chat : chats) {
-            chat.setDeleted(true);
+            chat.setSender(chatRoomMember);
         }
     }
 
-
-
+    @Transactional
+    public void exitChatRoom(Member member, ChatRoomExitRequest chatRoomExitRequest) {
+        ChatRoomMember chatRoomMember = chatRoomMemberRepository.findByMemberIdAndChatRoomId(member.getId(), chatRoomExitRequest.getChatRoomId()).orElseThrow(()-> new IllegalArgumentException("일치하는 멤버가 없습니다."));
+        chatRoomMember.setDeleted(true);
+        ChatRoomMember blankMember = chatRoomMemberRepository.findByChatRoomId(null).orElseThrow();
+        List<Chat> chats = chatRepository.findAllBySenderId(chatRoomMember.getId());
+        for (Chat chat : chats) {
+            chat.setSender(blankMember);
+        }
+    }
 }

@@ -2,6 +2,7 @@ package com.ltalk.web.chatroom.controller;
 
 import com.ltalk.web.chatroom.domain.ChatRoom;
 import com.ltalk.web.chatroom.dto.request.ChatRoomCreateRequest;
+import com.ltalk.web.chatroom.dto.request.ChatRoomExitRequest;
 import com.ltalk.web.chatroom.dto.response.ChatRoomDto;
 import com.ltalk.web.chatroom.service.ChatRoomService;
 import com.ltalk.web.global.config.LoginMember;
@@ -34,5 +35,12 @@ public class ChatRoomController {
     @GetMapping
     public ResponseEntity<List<ChatRoomDto>> getChatRooms(@LoginMember Member member) {
         return ResponseEntity.ok(chatRoomService.getChatRoomsForMember(member.getId()));
+    }
+
+    @ResponseBody
+    @DeleteMapping
+    public ResponseEntity deleteChatRoom(@LoginMember Member member, @RequestBody ChatRoomExitRequest chatRoomExitRequest) {
+        chatRoomService.exitChatRoom(member, chatRoomExitRequest);
+        return ResponseEntity.ok().build();
     }
 }
