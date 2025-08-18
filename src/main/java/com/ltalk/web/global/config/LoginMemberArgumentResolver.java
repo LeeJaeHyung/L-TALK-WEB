@@ -18,7 +18,6 @@ import org.springframework.web.method.support.ModelAndViewContainer;
 @RequiredArgsConstructor
 public class LoginMemberArgumentResolver implements HandlerMethodArgumentResolver {
 
-    private final RedisLoginTokenService redisLoginTokenService;
     private final MemberRepository memberRepository;
 
     @Override

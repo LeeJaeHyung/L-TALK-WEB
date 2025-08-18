@@ -1,6 +1,10 @@
 package com.ltalk.web.global.websocket;
 
+import com.ltalk.web.global.dto.LoginMemberDto;
+import com.ltalk.web.global.service.RedisLoginTokenService;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
 import org.springframework.http.server.ServletServerHttpRequest;
@@ -11,7 +15,11 @@ import org.springframework.web.socket.server.HandshakeInterceptor;
 import java.util.Map;
 
 @Component
+@RequiredArgsConstructor
 public class WsHandshakeInterceptor implements HandshakeInterceptor {// 핸드쉐이크시 인터셉트
+
+    RedisLoginTokenService redisLoginTokenService;
+
     @Override
     public boolean beforeHandshake(
             ServerHttpRequest req,               // ① 추상 HTTP 요청
@@ -19,11 +27,30 @@ public class WsHandshakeInterceptor implements HandshakeInterceptor {// 핸드�
             WebSocketHandler wsHandler,          // ③ 이후 사용할 WS 핸들러
             Map<String, Object> attributes) {    // ④ WS 세션에 보관되는 키-값 저장소
         if (req instanceof ServletServerHttpRequest sreq) {
-            HttpServletRequest http = sreq.getServletRequest(); // ⑤ 서블릿 요청으로 캐스팅
-            String tag = http.getParameter("tag");              // ⑥ 쿼리 파라미터 예시
-            attributes.put("tag", tag != null ? tag : "guest"); // ⑦ STOMP 단계에서 사용될 값 저장
+            HttpServletRequest http = sreq.getServletRequest();// ⑤ 서블릿 요청으로 캐스팅
+            Cookie[] cookies = http.getCookies();
+            if (cookies != null) {
+                for(Cookie cookie : cookies) {
+                    if(cookie.getName().equals("access_token")) {
+                        String accessToken = cookie.getValue();
+                        LoginMemberDto loginMemberDto = redisLoginTokenService.get(accessToken);
+                        if(loginMemberDto != null) {
+                            attributes.put("memberId", loginMemberDto.getId());
+                            return true;
+                        }else{
+                            if (res instanceof org.springframework.http.server.ServletServerHttpResponse sres) {
+                                Cookie kill = new Cookie("access_token", "");
+                                kill.setMaxAge(0);
+                                kill.setPath("/");
+                                sres.getServletResponse().addCookie(kill);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
         }
-        return true; // ⑧ false를 반환하면 업그레이드(연결) 거절
+        return false; // ⑧ false를 반환하면 업그레이드(연결) 거절
     }
 
     @Override
