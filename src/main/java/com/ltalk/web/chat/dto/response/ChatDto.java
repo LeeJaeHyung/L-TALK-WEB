@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 public record ChatDto(
         Long id,
         Long senderId,
+        Long chatRoomId,
         String message,
-        String chatMessage, LocalDateTime createdAt
+        LocalDateTime createdAt
 ) {}

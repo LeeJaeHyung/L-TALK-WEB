@@ -113,7 +113,7 @@ public class ChatRoomService {
                                 .map(chat -> new ChatDto(
                                         chat.getId(),
                                         chat.getSender().getMember().getId(),
-                                        chat.getSender().getMember().getUserName(),
+                                        chat.getSender().getChatRoom().getId(),
                                         chat.getMessage(),
                                         chat.getCreatedAt()
                                 )).toList()
