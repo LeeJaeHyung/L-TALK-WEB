@@ -148,4 +148,8 @@ public class ChatRoomService {
             chat.setSender(blankMember);
         }
     }
+
+    public boolean canSubscribe(Long memberId, Long roomId){
+        return chatRoomMemberRepository.existsByMemberIdAndChatRoomId(memberId, roomId);
+    }
 }

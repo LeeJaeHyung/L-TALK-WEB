@@ -1,21 +1,33 @@
 package com.ltalk.web.global.websocket;
 
+import com.ltalk.web.chatroom.service.ChatRoomService;
 import com.ltalk.web.global.dto.LoginMemberDto;
+import io.lettuce.core.RedisCredentialsProvider;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.stereotype.Component;
+import org.springframework.util.AntPathMatcher;
 
 import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 @Component
 public class StompChannelInterceptor implements ChannelInterceptor {
+
+    private static final AntPathMatcher PATH = new AntPathMatcher();
+    private static final String PATTERN = "/topic/chatrooms/{roomId}/chats";
+    private final ChatRoomService chatRoomService;
+
+    public StompChannelInterceptor(ChatRoomService chatRoomService) {
+        this.chatRoomService = chatRoomService;
+    }
 
     @Override
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
@@ -57,14 +69,9 @@ public class StompChannelInterceptor implements ChannelInterceptor {
 
     private void handleSubscribe(StompHeaderAccessor accessor) {
         // 구독 경로 유효성 검사, 권한 확인
-        System.out.println(accessor.getDestination());
-        String[] destinations = Objects.requireNonNull(accessor.getDestination()).split("/");
-        System.out.println("destinations.length = " + destinations.length);
-        for (String destination : destinations) {
-            System.out.println(destination);
-        }
-        System.out.println("destinations  끝");
-
+        if(accessor.getUser()==null) new IllegalArgumentException("접속가능한 사용자가 아님");
+        String destination = accessor.getDestination();
+        canSubscribe(accessor.getUser().getName(),destination);
     }
 
     private void handleSend(StompHeaderAccessor accessor, Message<?> message) {
@@ -80,5 +87,17 @@ public class StompChannelInterceptor implements ChannelInterceptor {
 
     private void handleDisconnect(StompHeaderAccessor accessor) {
         // 접속 종료 시 세션 정리
+    }
+
+    private void canSubscribe(String memberIdStr, String dest) {
+        if (!PATH.match(PATTERN, dest)) throw new IllegalArgumentException("Unsupported destination: " + dest);
+        String roomIdStr = PATH.extractUriTemplateVariables(PATTERN, dest).get("roomId");
+        if (roomIdStr == null || !roomIdStr.matches("\\d+")) throw new IllegalArgumentException("Invalid roomId: " + roomIdStr);
+        Long roomId = Long.parseLong(roomIdStr);
+        Long memberId = Long.parseLong(memberIdStr);
+        if(!chatRoomService.canSubscribe(memberId, roomId)){
+            System.out.println("챗룸 맴버없음");
+            throw new IllegalStateException("채팅방에 참여된 맴버가 아닙니다.");
+        }
     }
 }

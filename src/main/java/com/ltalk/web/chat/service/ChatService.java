@@ -25,6 +25,7 @@ public class ChatService {
 
     @Transactional
     public void createChat(Long chatRoomId, ChatCreateRequest request, Long senderId) {
+        System.out.println("chatRoomId = " + chatRoomId+"     senderId = " + senderId);
         ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
                 .orElseThrow(() -> new IllegalArgumentException("채팅방이 존재하지 않습니다"));
 
