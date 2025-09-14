@@ -34,7 +34,7 @@ public class ChatRoomController {
     @ResponseBody
     @GetMapping
     public ResponseEntity<List<ChatRoomDto>> getChatRooms(@LoginMember Member member) {
-        return ResponseEntity.ok(chatRoomService.getChatRoomsForMember(member.getId()));
+        return ResponseEntity.ok(chatRoomService.getChatRoomsOneShot(member.getId()));
     }
 
     @ResponseBody

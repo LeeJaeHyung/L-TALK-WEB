@@ -6,16 +6,29 @@
     <title>LTALK 웹</title>
 </head>
 <body>
-
-<h1>환영합니다 LTALK 웹!</h1>
-<p>여기에서 로그인하고 채팅을 시작해보세요</p>
-<form action="/login" method="post">
+<h1>로그인</h1>
+<form id="loginForm" action="/login" method="post">
     <input type="text" name="userName"/>
     <input type="password" name="password"/>
-    <button type="submit">
-        전송
-    </button>
+    <button type="submit">전송</button>
 </form>
+
+<script>
+    document.getElementById("loginForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const res = await fetch("/login", {
+            method: "POST",
+            body: formData
+        });
+        if (res.ok) {
+            window.location.href = "/home";
+        } else {
+            alert("로그인 실패");
+        }
+    });
+</script>
+
 
 <a href="/sign-up" style="display:inline-block; padding:10px 20px; background:#007bff; color:white; text-decoration:none; border-radius:5px;">
     회원가입

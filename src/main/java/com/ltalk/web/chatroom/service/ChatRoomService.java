@@ -11,35 +11,28 @@ import com.ltalk.web.chatroom.dto.response.ChatRoomDto;
 import com.ltalk.web.chatroom.dto.response.ChatRoomMemberDto;
 import com.ltalk.web.chatroom.repository.ChatRoomMemberRepository;
 import com.ltalk.web.chatroom.repository.ChatRoomRepository;
+import com.ltalk.web.chatroom.util.JsonParserUtil;
 import com.ltalk.web.global.dto.LoginMemberDto;
 import com.ltalk.web.member.domain.Member;
 import com.ltalk.web.member.repository.MemberRepository;
 import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
-import static com.fasterxml.jackson.databind.type.LogicalType.Collection;
-
+@RequiredArgsConstructor
 @Service
 public class ChatRoomService {
 
-    @Autowired
-    private MemberRepository memberRepository;
-    @Autowired
-    private ChatRoomRepository chatRoomRepository;
-    @Autowired
-    private ChatRoomMemberRepository chatRoomMemberRepository;
-    @Autowired
-    private ChatRepository chatRepository;
-    @Autowired
-    private DataSourceTransactionManagerAutoConfiguration dataSourceTransactionManagerAutoConfiguration;
+    private final MemberRepository memberRepository;
+    private final ChatRoomRepository chatRoomRepository;
+    private final ChatRoomMemberRepository chatRoomMemberRepository;
+    private final ChatRepository chatRepository;
+    private final JsonParserUtil jsonParserUtil;
+
 
     @Transactional
     public void createChatRoom(LoginMemberDto member, ChatRoomCreateRequest chatRoomCreateRequest) {
@@ -80,7 +73,7 @@ public class ChatRoomService {
     }
 
     @Transactional
-    public List<ChatRoomDto> getChatRoomsForMember(Long memberId) {
+    public List<ChatRoomDto> getChatRoomsForMember1(Long memberId) {
         List<ChatRoomMember> chatRoomMemberList = chatRoomMemberRepository.findAllFromMemberId(memberId);
         System.out.println("chatRoomMemberList size : " + chatRoomMemberList.size());
         List<Long> ids = new ArrayList<>();
@@ -151,5 +144,78 @@ public class ChatRoomService {
 
     public boolean canSubscribe(Long memberId, Long roomId){
         return chatRoomMemberRepository.existsByMemberIdAndChatRoomId(memberId, roomId);
+    }
+
+
+
+    public List<ChatRoomDto> getChatRoomsForMember(Long memberId) {
+        // 1) 내가 속한 방 ID 수집
+        List<ChatRoomMember> chatRoomMemberList = chatRoomMemberRepository.findAllFromMemberId(memberId);
+        List<Long> roomIds = chatRoomMemberList.stream()
+                .map(crm -> crm.getChatRoom().getId())
+                .toList();
+
+        if (roomIds.isEmpty()) return List.of();
+
+        // 2) 방 + 멤버만 페치
+        List<ChatRoom> chatRooms = chatRoomRepository.findChatRoomsWithMembersOnly(roomIds);
+
+        // 3) 방별 최신 채팅 1건만 조회
+        List<Chat> latestChats = chatRepository.findLatestChatByRoomIds(roomIds);
+
+        // sender.chatRoom.id 기준으로 매핑
+        Map<Long, Chat> latestByRoomId = latestChats.stream()
+                .collect(Collectors.toMap(
+                        c -> c.getSender().getChatRoom().getId(),
+                        c -> c
+                ));
+
+        // 4) DTO로 변환 (chatList는 0~1건)
+        return chatRooms.stream()
+                .map(cr -> {
+                    // 최신 채팅 1건을 DTO 리스트로
+                    Chat latest = latestByRoomId.get(cr.getId());
+                    List<ChatDto> chatDtoList = (latest == null)
+                            ? List.of()
+                            : List.of(new ChatDto(
+                            latest.getId(),
+                            latest.getSender().getMember().getId(),
+                            latest.getSender().getChatRoom().getId(),
+                            latest.getMessage(),
+                            latest.getCreatedAt()
+                    ));
+
+                    return new ChatRoomDto(
+                            cr.getId(),
+                            cr.getName(),
+                            cr.getType().name(),
+                            cr.getParticipantCount(),
+                            cr.getMemberList().stream()
+                                    .map(m -> new ChatRoomMemberDto(
+                                            m.getId(),
+                                            m.getMember().getId(),
+                                            m.getMember().getUserName()
+                                    )).toList(),
+                            chatDtoList
+                    );
+                })
+                .toList();
+    }
+
+    public List<ChatRoomDto> getChatRoomsOneShot(Long memberId) {
+        var rows = chatRoomRepository.findChatRoomSummaries(memberId);
+        return rows.stream().map(r -> {
+            List<ChatRoomMemberDto> members = jsonParserUtil.parseMembersJson(r.getMembersJson());
+            ChatDto last = jsonParserUtil.parseLastChatJson(r.getLastChatJson()); // null 허용
+            List<ChatDto> chats = (last == null) ? List.of() : List.of(last);
+            return new ChatRoomDto(
+                    r.getChatRoomId(),
+                    r.getChatRoomName(),
+                    /* type */ null, // 필요시 SELECT에 추가
+                    r.getParticipantCount(),
+                    members,
+                    chats
+            );
+        }).toList();
     }
 }
