@@ -17,7 +17,6 @@ import com.ltalk.web.member.domain.Member;
 import com.ltalk.web.member.repository.MemberRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.*;

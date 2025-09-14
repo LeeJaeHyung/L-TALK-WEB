@@ -1,6 +1,5 @@
 package com.ltalk.web.chatroom.controller;
 
-import com.ltalk.web.chatroom.domain.ChatRoom;
 import com.ltalk.web.chatroom.dto.request.ChatRoomCreateRequest;
 import com.ltalk.web.chatroom.dto.request.ChatRoomExitRequest;
 import com.ltalk.web.chatroom.dto.response.ChatRoomDto;
@@ -9,9 +8,7 @@ import com.ltalk.web.global.config.LoginMember;
 import com.ltalk.web.global.dto.LoginMemberDto;
 import com.ltalk.web.member.domain.Member;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import lombok.AllArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
