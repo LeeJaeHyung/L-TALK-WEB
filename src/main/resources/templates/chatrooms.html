@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <title>L-TALK 채팅방</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+        :root { color-scheme: light dark; }
+        body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Apple SD Gothic Neo, Noto Sans KR, "맑은 고딕", sans-serif; }
+        header { padding: 16px; border-bottom: 1px solid #ddd; position: sticky; top: 0; background: #fff; }
+        .container { max-width: 960px; margin: 0 auto; padding: 16px; }
+        .toolbar { display: flex; gap: 8px; align-items: center; }
+        .search { flex: 1; padding: 10px 12px; border: 1px solid #ccc; border-radius: 10px; }
+        .card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 14px; margin-bottom: 12px; background: #fff; }
+        .card h3 { margin: 0 0 6px; font-size: 18px; }
+        .meta { font-size: 12px; color: #666; margin-bottom: 8px; display:flex; gap:10px; flex-wrap:wrap; }
+        .members { font-size: 13px; color: #333; margin: 6px 0; }
+        .last { font-size: 14px; padding: 10px; background: #f9fafb; border: 1px solid #eef2f7; border-radius: 10px; }
+        .badge { display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; border:1px solid #e5e7eb; color:#444; background:#fafafa; }
+        .muted { color:#888; }
+        .row { display:flex; gap:8px; align-items:center; flex-wrap: wrap; }
+        .error { color:#b91c1c; background:#fef2f2; border:1px solid #fecaca; padding:10px; border-radius:10px; }
+        .loading { padding: 16px; }
+        @media (prefers-color-scheme: dark) {
+            header, .card, body { background: #0b0b0b; color: #e5e7eb; }
+            .meta { color:#9ca3af; }
+            .card { border-color:#262626; }
+            .last { background:#0f172a; border-color:#1f2937; }
+            .badge { background:#111827; border-color:#374151; color:#e5e7eb; }
+            .search { background:#0b0b0b; color:#e5e7eb; border-color:#374151; }
+        }
+    </style>
+</head>
+<body>
+<header>
+    <div class="container">
+        <div class="toolbar">
+            <strong style="font-size:18px;">채팅방 목록</strong>
+            <input id="q" class="search" type="search" placeholder="방 이름/멤버/마지막 메시지 검색..." />
+            <button id="refresh">새로고침</button>
+        </div>
+    </div>
+</header>
+
+<main class="container">
+    <div id="status" class="loading">불러오는 중...</div>
+    <div id="list" hidden></div>
+</main>
+
+<script>
+    // createdAt 문자열이 "2025-09-14 17:16:38.122543" 형태일 수 있어 공백을 T로 바꿔 Date 파싱 시도
+    function toKST(dateStr) {
+        if (!dateStr) return '';
+        let s = String(dateStr).trim();
+        if (s.includes(' ') && !s.includes('T')) s = s.replace(' ', 'T'); // "yyyy-MM-dd HH:mm:ss" -> "yyyy-MM-ddTHH:mm:ss"
+        // 마이크로초(6자리)인 경우 JS Date가 못 읽을 수 있어 초과 소수부는 최대 3자리로 자름
+        s = s.replace(/(\.\d{3})\d+$/, '$1');
+        const d = new Date(s);
+        if (isNaN(d.getTime())) return dateStr; // 원문 반환
+        // KST로 표시
+        return new Intl.DateTimeFormat('ko-KR', {
+            dateStyle: 'medium',
+            timeStyle: 'short',
+            timeZone: 'Asia/Seoul'
+        }).format(d);
+    }
+
+    // XSS 대비 간단 이스케이프
+    function esc(s) {
+        return String(s ?? '')
+            .replaceAll('&','&amp;')
+            .replaceAll('<','&lt;')
+            .replaceAll('>','&gt;')
+            .replaceAll('"','&quot;')
+            .replaceAll("'","&#39;");
+    }
+
+    function renderRooms(rooms, filter='') {
+        const list = document.getElementById('list');
+        list.innerHTML = '';
+        const q = filter.trim().toLowerCase();
+
+        const filtered = rooms.filter(r => {
+            const name = (r.name || '').toLowerCase();
+            const members = (r.members || []).map(m => m.username || '').join(' ').toLowerCase();
+            const last = (r.chats && r.chats[0] ? r.chats[0].message : '').toLowerCase();
+            return !q || name.includes(q) || members.includes(q) || last.includes(q);
+        });
+
+        if (filtered.length === 0) {
+            list.innerHTML = '<div class="muted">표시할 채팅방이 없어요.</div>';
+            return;
+        }
+
+        for (const room of filtered) {
+            const type = room.type ?? 'UNKNOWN';
+            const members = room.members?.map(m => esc(m.username)).join(', ') || '-';
+            const last = room.chats && room.chats[0] ? room.chats[0] : null;
+
+            const lastHtml = last
+                ? `<div class="last">
+             <div class="row">
+               <span class="badge">마지막 메시지</span>
+               <span class="muted">${toKST(last.createdAt)}</span>
+             </div>
+             <div style="margin-top:6px;">${esc(last.message)}</div>
+           </div>`
+                : `<div class="last muted">아직 메시지가 없어요.</div>`;
+
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.innerHTML = `
+        <h3>${esc(room.name || '(이름 없음)')}</h3>
+        <div class="meta">
+          <span class="badge">ID: ${room.id}</span>
+          <span class="badge">타입: ${esc(type)}</span>
+          <span class="badge">인원: ${room.participantCount}</span>
+        </div>
+        <div class="members"><strong>멤버</strong>: ${members}</div>
+        ${lastHtml}
+      `;
+            list.appendChild(card);
+        }
+    }
+
+    async function loadRooms() {
+        const status = document.getElementById('status');
+        const list = document.getElementById('list');
+        status.hidden = false;
+        list.hidden = true;
+        status.className = 'loading';
+        status.textContent = '불러오는 중...';
+
+        try {
+            const res = await fetch('/chatrooms', {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json'
+                },
+                credentials: 'include'
+            });
+            if (!res.ok) {
+                const text = await res.text().catch(()=>'');
+                throw new Error(`HTTP ${res.status} ${res.statusText} ${text}`);
+            }
+            const data = await res.json();
+            console.log(data);
+
+            // 기대 형태: Array<ChatRoomDto>
+            renderRooms(Array.isArray(data) ? data : []);
+            status.hidden = true;
+            list.hidden = false;
+
+            // 검색 연동
+            const q = document.getElementById('q');
+            q.oninput = () => renderRooms(data, q.value);
+
+        } catch (e) {
+            console.error(e);
+            status.hidden = false;
+            list.hidden = true;
+            status.className = 'error';
+            status.textContent = `불러오기 실패: ${e.message}`;
+        }
+    }
+
+    window.addEventListener('load', () => {
+        document.getElementById('refresh').addEventListener('click', loadRooms);
+        loadRooms();
+    });
+</script>
+</body>
+</html>

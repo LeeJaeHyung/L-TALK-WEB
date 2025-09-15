@@ -15,4 +15,12 @@ public class HomeController {
     public String home2(){
         return "home";
     }
+
+    @GetMapping("/chatrooms/view")
+    public String chatrooms(){return "chatrooms";}
+
+    @GetMapping("/chatroomtest")
+    public String chatroomTest(){
+        return "chatroomtest";
+    }
 }

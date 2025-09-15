@@ -35,6 +35,12 @@ public class ChatRoomController {
     }
 
     @ResponseBody
+    @GetMapping("/{chatRoomId}")
+    public ResponseEntity<ChatRoomDto> getChatRoom(@LoginMember Member member, @PathVariable Long chatRoomId) {
+        return ResponseEntity.ok(chatRoomService.getChatRoom(member, chatRoomId));
+    }
+
+    @ResponseBody
     @DeleteMapping
     public ResponseEntity deleteChatRoom(@LoginMember Member member, @RequestBody ChatRoomExitRequest chatRoomExitRequest) {
         chatRoomService.exitChatRoom(member, chatRoomExitRequest);

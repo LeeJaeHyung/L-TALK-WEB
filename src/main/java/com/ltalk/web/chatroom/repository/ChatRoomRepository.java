@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
     @Query("""
@@ -85,7 +86,14 @@ WHERE cr.id IN :ids
     """, nativeQuery = true)
     List<ChatRoomSummaryProjection> findChatRoomSummaries(@Param("memberId") Long memberId);
 
-
+    @Query("""
+        SELECT DISTINCT cr
+        FROM ChatRoom cr
+        LEFT JOIN FETCH cr.memberList m
+        LEFT JOIN FETCH cr.chatList c
+        WHERE cr.id = :chatRoomId
+        """)
+    Optional<ChatRoom> findByIdWithMembersAndChats(@Param("chatRoomId") Long chatRoomId);
 
 }
 

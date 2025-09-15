@@ -85,6 +85,7 @@ public class ChatController {
         chatService.createChat(roomId, req, senderId);
         System.out.println("insert 완료");
         template.convertAndSend("/topic/chatrooms/" + roomId + "/chats", dto);
+
     }
 
 

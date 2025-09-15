@@ -217,4 +217,35 @@ public class ChatRoomService {
             );
         }).toList();
     }
+
+    public ChatRoomDto getChatRoom(Member member, Long roomId) {
+        if(!chatRoomMemberRepository.existsByMemberIdAndChatRoomId(member.getId(), roomId)){
+            new IllegalArgumentException("해당 채팅방에 접근할 권한이 없습니다");
+        }
+        ChatRoom chatRoom = chatRoomRepository.findByIdWithMembersAndChats(roomId)
+                .orElseThrow(() -> new IllegalArgumentException("채팅방을 찾을 수 없습니다."));
+
+        return new ChatRoomDto(
+                chatRoom.getId(),
+                chatRoom.getName(),
+                chatRoom.getType().name(),
+                chatRoom.getParticipantCount(),
+                chatRoom.getMemberList().stream()
+                        .map(m -> new ChatRoomMemberDto(
+                                m.getId(),
+                                m.getMember().getId(),
+                                m.getMember().getUserName()
+                        ))
+                        .toList(),
+                chatRoom.getChatList().stream()
+                        .map(c -> new ChatDto(
+                                c.getId(),
+                                c.getSender().getMember().getId(),
+                                c.getSender().getChatRoom().getId(),
+                                c.getMessage(),
+                                c.getCreatedAt()
+                        ))
+                        .toList()
+        );
+    }
 }

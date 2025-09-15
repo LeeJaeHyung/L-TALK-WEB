@@ -92,6 +92,7 @@ public class StompChannelInterceptor implements ChannelInterceptor {
     private void canSubscribe(String memberIdStr, String dest) {
         if (!PATH.match(PATTERN, dest)) throw new IllegalArgumentException("Unsupported destination: " + dest);
         String roomIdStr = PATH.extractUriTemplateVariables(PATTERN, dest).get("roomId");
+        System.out.println("구독 요청 MemberID:"+memberIdStr+" roomID:"+roomIdStr);
         if (roomIdStr == null || !roomIdStr.matches("\\d+")) throw new IllegalArgumentException("Invalid roomId: " + roomIdStr);
         Long roomId = Long.parseLong(roomIdStr);
         Long memberId = Long.parseLong(memberIdStr);
@@ -99,5 +100,6 @@ public class StompChannelInterceptor implements ChannelInterceptor {
             System.out.println("챗룸 맴버없음");
             throw new IllegalStateException("채팅방에 참여된 맴버가 아닙니다.");
         }
+        System.out.println("구독 요청승인!!     MemberID:"+memberIdStr+" roomID:"+roomIdStr);
     }
 }
