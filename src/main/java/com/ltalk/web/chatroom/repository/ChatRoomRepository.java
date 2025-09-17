@@ -92,6 +92,7 @@ WHERE cr.id IN :ids
         LEFT JOIN FETCH cr.memberList m
         LEFT JOIN FETCH cr.chatList c
         WHERE cr.id = :chatRoomId
+        order by c.createdAt
         """)
     Optional<ChatRoom> findByIdWithMembersAndChats(@Param("chatRoomId") Long chatRoomId);
 

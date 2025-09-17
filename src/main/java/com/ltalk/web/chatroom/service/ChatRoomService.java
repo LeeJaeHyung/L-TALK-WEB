@@ -84,7 +84,7 @@ public class ChatRoomService {
         System.out.println("chatRooms size : " + chatRooms.size());
         for (ChatRoom chatRoom : chatRooms) {
             System.out.println(chatRoom.getId());
-            Set<Chat> chats = chatRoom.getChatList();
+            List<Chat> chats = chatRoom.getChatList();
             for (Chat chat : chats) {
                 System.out.println(chat.getMessage());
             }

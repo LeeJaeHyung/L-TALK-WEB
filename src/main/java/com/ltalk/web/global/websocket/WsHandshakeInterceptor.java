@@ -37,6 +37,7 @@ public class WsHandshakeInterceptor implements HandshakeInterceptor {// 핸드�
                         LoginMemberDto loginMemberDto = redisLoginTokenService.get(accessToken);
                         if(loginMemberDto != null) {
                             attributes.put("memberId", String.valueOf(loginMemberDto.getId()));
+                            attributes.put("token", accessToken);
                             return true;
                         }else{
                             if (res instanceof org.springframework.http.server.ServletServerHttpResponse sres) {
