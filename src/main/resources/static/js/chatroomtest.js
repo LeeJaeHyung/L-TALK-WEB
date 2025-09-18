@@ -1,5 +1,31 @@
 'use strict';
 
+/*
+  LTALK 채팅방 테스트 스크립트
+
+  이 파일은 다음 백엔드 API/프로토콜과 연동됩니다.
+  - REST
+    1) GET /chatrooms → List<ChatRoomDto>
+       - 각 항목에 최근 채팅 1건이 ChatDto 형태로 포함될 수 있음(senderId만 존재)
+    2) GET /chatrooms/{chatRoomId} → ChatRoomViewDto
+       - 해당 방의 모든 채팅이 ChatViewDto 형태로 반환됨(senderNickname 포함)
+
+  - STOMP over SockJS
+    - 구독 토픽: /topic/chatrooms/{roomId}/chats
+    - 발행(서버): ChatController.publishToRoom(...)에서 ChatDto(혹은 ViewDto) 직렬화하여 동일 토픽으로 전송
+    - 주의: STOMP frame body는 문자열. JSON.parse가 필요함.
+
+  로컬 상태 관리
+  - roomsData: REST로 받은 채팅방 메타/최근 메시지(목록/상세 반영)
+  - roomMessages: Map(roomId → 정규화된 메시지 배열). 메시지는 모두 {id, chatRoomId, message, createdAt, senderId, senderNickname} 형태로 보관
+  - subscriptions: STOMP 구독 핸들
+
+  정규화/표시 규칙
+  - REST(목록): ChatDto(senderId)만 온 경우가 있어 senderNickname 없음
+  - REST(상세): ChatViewDto(senderNickname) 포함
+  - STOMP: 서버 전송 형식에 따라 ChatDto 또는 ChatViewDto가 올 수 있으므로, 가능하면 senderNickname을 우선 사용하고 없으면 senderId로 대체 표기
+*/
+
 // ---------- 유틸 ----------
 function toKST(dateStr) {
     if (!dateStr) return '';
@@ -32,10 +58,12 @@ const pendingSubs = new Set();      // Set<string roomId>
 let currentModalRoomId = null;
 const roomMessages = new Map();     // roomId -> [{message, senderId, createdAt}...]
 
+// STOMP 경로: 서버/클라 모두 이 경로로 통일해야 수신 가능
 const topicOf = (rid) => `/topic/chatrooms/${rid}/chats`;
 const appOf   = (rid) => `/app/chatrooms/${rid}/chats`;
 
 // ---------- 리스트 렌더 ----------
+// 채팅방 목록 카드 렌더링
 function renderRooms(rooms, filter='') {
     const list = document.getElementById('list');
     list.innerHTML = '';
@@ -89,7 +117,7 @@ function renderRooms(rooms, filter='') {
     }
 }
 
-// 수신 시 카드/모달 갱신
+// STOMP 수신 또는 버퍼 반영 시 카드/모달 갱신
 function updateRoomCardByMessage(msgObj){
     const rid = msgObj?.chatRoomId ?? msgObj?.roomId ?? msgObj?.chatroomId;
     if (!rid) return;
@@ -109,7 +137,13 @@ function updateRoomCardByMessage(msgObj){
 
     const key = String(rid);
     const arr = roomMessages.get(key) ?? [];
-    arr.push({ message: msgObj.message ?? '', senderId: msgObj.senderId, createdAt: msgObj.createdAt });
+    // 정규화된 형태로 메시지 버퍼에 push (닉네임 우선)
+    arr.push({
+        message: msgObj.message ?? '',
+        senderId: msgObj.senderId,
+        senderNickname: msgObj.senderNickname,
+        createdAt: msgObj.createdAt
+    });
     roomMessages.set(key, arr);
 
     if (currentModalRoomId && String(currentModalRoomId) === key) {
@@ -118,20 +152,22 @@ function updateRoomCardByMessage(msgObj){
 }
 
 // ---------- REST ----------
+// 채팅방 목록 조회: GET /chatrooms → List<ChatRoomDto>
 async function loadRooms() {
     const status = document.getElementById('status');
     const list   = document.getElementById('list');
     status.hidden = false; list.hidden = true;
     status.className = 'loading';
     status.textContent = '불러오는 중...';
+    var startDate = new Date();
 
     try {
         const res = await fetch('/chatrooms', { method:'GET', headers:{'Accept':'application/json'}, credentials:'include' });
         if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
-        const data = await res.json();
+        const data = await res.json(); // ChatRoomDto[]
         roomsData = Array.isArray(data) ? data : [];
 
-        // 마지막 메시지 버퍼에 심기
+        // 마지막 메시지 버퍼에 심기(목록의 최근 1건은 ChatDto로, 닉네임이 없을 수 있음)
         roomsData.forEach(r => {
             const key = String(r.id);
             if (!roomMessages.has(key)) roomMessages.set(key, []);
@@ -163,32 +199,40 @@ async function loadRooms() {
         status.className = 'error';
         status.textContent = `불러오기 실패: ${e.message}`;
     }
+    var endDate = new Date();
+    console.log((endDate.getTime()-startDate.getTime())+"걸림");
 }
 
-// 방 상세(모달): /chatrooms/{chatRoomId}
+// 방 상세(모달): GET /chatrooms/{chatRoomId} → ChatRoomViewDto
 async function fetchRoomDetail(roomId) {
+    console.log("채팅 데이터 불러오기중");
+    var startDate = new Date();
     const res = await fetch(`/chatrooms/${roomId}`, {
         method: 'GET',
         headers: { 'Accept': 'application/json' },
         credentials: 'include'
     });
     if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
-    const dto = await res.json(); // ChatRoomDto
+    const dto = await res.json(); // ChatRoomViewDto
 
     const key = String(roomId);
+    // 상세의 chats는 ChatViewDto(닉네임 포함) 기준으로 정규화
     const arr = (dto.chats || []).map(c => ({
         message: c.message,
         senderId: c.senderId,
+        senderNickname: c.senderNickname,
         createdAt: c.createdAt
     }));
     roomMessages.set(key, arr);
 
     const idx = roomsData.findIndex(r => String(r.id) === String(roomId));
     if (idx >= 0) roomsData[idx] = dto;
+    console.log((new Date().getTime()-startDate.getTime())+"ms 걸림");
     return dto;
 }
 
 // ---------- STOMP ----------
+// SockJS 팩토리: /ws 엔드포인트는 서버 WebSocketConfig와 일치해야 함
 const sockFactory = () => new SockJS('/ws', null, {
     transports: ['xhr-streaming','xhr-polling','websocket'],
     transportOptions: {
@@ -197,6 +241,7 @@ const sockFactory = () => new SockJS('/ws', null, {
     }
 });
 
+// STOMP 클라이언트 생성: 연결/오류/종료 핸들링 및 재구독
 function createClient(){
     return new StompJs.Client({
         webSocketFactory: sockFactory,
@@ -227,10 +272,12 @@ function createClient(){
     });
 }
 
+// 연결 보장: 중복 연결 방지, onConnect는 createClient 설정 사용
 function ensureConnected(){
     if (client?.active || connecting) return;
     client = createClient();
     connecting = true;
+    // onConnect는 createClient 내부에 정의되어 있음
     client.activate();
 }
 
@@ -256,6 +303,7 @@ function drainPendingSubscriptions(){
 }
 
 // --- 실제 구독 ---
+// 특정 방 1회 구독: JSON.parse 성공 시 객체로, 실패 시 평문 메시지로 처리
 function subscribeRoomOnce(rid){
     const key = String(rid);
     if (!client?.active) { queueSubscribe(rid); return; } // ← 연결 전이면 큐
@@ -263,9 +311,10 @@ function subscribeRoomOnce(rid){
     const sub = client.subscribe(topicOf(rid), (frame) => {
         const body = frame?.body;
         try {
-            const obj = JSON.parse(body);
+            const obj = JSON.parse(body); // 서버가 DTO(Object)를 보낸 경우
             updateRoomCardByMessage(obj);
         } catch {
+            // 서버가 순수 문자열을 보낸 경우(권장 X): 평문으로 표시
             updateRoomCardByMessage({ chatRoomId: rid, message: body, createdAt: new Date().toISOString() });
         }
     });
@@ -296,6 +345,7 @@ function resubscribeAll(){
 }
 
 // 메시지 전송(낙관적 반영 없음)
+// 메시지 전송: SEND /app/chatrooms/{rid}/chats, 서버에서 저장 후 동일 토픽으로 브로드캐스트
 function publishToRoom(rid, text){
     if (!client?.active) {
         alert('웹소켓이 연결되어 있지 않습니다.');
@@ -379,13 +429,16 @@ function renderChatLog(roomId){
     }
 }
 
+// 채팅 한 줄 렌더: 닉네임 우선, 없으면 senderId로 대체 표기
 function appendChatRow(m){
     if (!$chatLog) return;
     const row = document.createElement('div');
     row.className = 'chat-row';
     const time = toKST(m.createdAt ?? new Date().toISOString());
-    const sender = m.senderId != null ? `sender:${m.senderId}` : '';
-    row.innerHTML = `${esc(m.message ?? '')} <span class="chat-time">(${sender}${sender ? ' · ' : ''}${time})</span>`;
+    const who = (m.senderNickname && m.senderNickname.trim())
+        ? m.senderNickname
+        : (m.senderId != null ? `sender:${m.senderId}` : '');
+    row.innerHTML = `${esc(m.message ?? '')} <span class="chat-time">(${esc(who)}${who ? ' · ' : ''}${time})</span>`;
     $chatLog.appendChild(row);
     $chatLog.scrollTop = $chatLog.scrollHeight;
 }

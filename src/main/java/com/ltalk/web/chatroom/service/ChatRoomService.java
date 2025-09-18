@@ -11,6 +11,8 @@ import com.ltalk.web.chatroom.dto.response.ChatRoomDto;
 import com.ltalk.web.chatroom.dto.response.ChatRoomMemberDto;
 import com.ltalk.web.chatroom.repository.ChatRoomMemberRepository;
 import com.ltalk.web.chatroom.repository.ChatRoomRepository;
+import com.ltalk.web.chatroom.dto.response.ChatRoomViewDto;
+import com.ltalk.web.chatroom.dto.response.ChatViewDto;
 import com.ltalk.web.chatroom.util.JsonParserUtil;
 import com.ltalk.web.global.dto.LoginMemberDto;
 import com.ltalk.web.member.domain.Member;
@@ -210,7 +212,7 @@ public class ChatRoomService {
             return new ChatRoomDto(
                     r.getChatRoomId(),
                     r.getChatRoomName(),
-                    /* type */ null, // 필요시 SELECT에 추가
+                    r.getChatRoomType(), // 필요시 SELECT에 추가
                     r.getParticipantCount(),
                     members,
                     chats
@@ -246,6 +248,29 @@ public class ChatRoomService {
                                 c.getCreatedAt()
                         ))
                         .toList()
+        );
+    }
+
+    @Transactional
+    public ChatRoomViewDto getChatRoomView(Member member, Long roomId) {
+        if (!chatRoomMemberRepository.existsByMemberIdAndChatRoomId(member.getId(), roomId)) {
+            throw new IllegalArgumentException("해당 채팅방에 접근할 권한이 없습니다");
+        }
+
+        ChatRoom room = chatRoomRepository.findRoomHeaderById(roomId)
+                .orElseThrow(() -> new IllegalArgumentException("채팅방을 찾을 수 없습니다."));
+        System.out.println("========================================================="+room.getType());
+
+        List<ChatRoomMemberDto> members = chatRoomRepository.findMemberDtosByChatRoomId(roomId);
+        List<ChatViewDto> chats = chatRoomRepository.findChatViewsByChatRoomId(roomId);
+
+        return new ChatRoomViewDto(
+                room.getId(),
+                room.getName(),
+                room.getType() != null ? room.getType().name() : null,
+                room.getParticipantCount(),
+                members,
+                chats
         );
     }
 }
