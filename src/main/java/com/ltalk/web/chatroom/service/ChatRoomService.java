@@ -19,6 +19,9 @@ import com.ltalk.web.member.domain.Member;
 import com.ltalk.web.member.repository.MemberRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -259,10 +262,10 @@ public class ChatRoomService {
 
         ChatRoom room = chatRoomRepository.findRoomHeaderById(roomId)
                 .orElseThrow(() -> new IllegalArgumentException("채팅방을 찾을 수 없습니다."));
-        System.out.println("========================================================="+room.getType());
 
         List<ChatRoomMemberDto> members = chatRoomRepository.findMemberDtosByChatRoomId(roomId);
-        List<ChatViewDto> chats = chatRoomRepository.findChatViewsByChatRoomId(roomId);
+        Pageable pageable = PageRequest.of(0, 50);
+        Page<ChatViewDto> chats = chatRoomRepository.findChatViewsByChatRoomId(roomId, pageable);
 
         return new ChatRoomViewDto(
                 room.getId(),
@@ -270,7 +273,7 @@ public class ChatRoomService {
                 room.getType() != null ? room.getType().name() : null,
                 room.getParticipantCount(),
                 members,
-                chats
+                chats.stream().toList()
         );
     }
 }

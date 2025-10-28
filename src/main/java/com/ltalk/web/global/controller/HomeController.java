@@ -23,4 +23,9 @@ public class HomeController {
     public String chatroomTest(){
         return "chatroomtest";
     }
+
+    @GetMapping("/main")
+    public String main(){
+        return "main";
+    }
 }

@@ -5,6 +5,8 @@ import com.ltalk.web.chatroom.domain.ChatRoom;
 import com.ltalk.web.chatroom.dto.response.ChatViewDto;
 import com.ltalk.web.chatroom.dto.response.ChatRoomMemberDto;
 import io.lettuce.core.dynamic.annotation.Param;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
@@ -108,21 +110,25 @@ WHERE cr.id IN :ids
     Optional<ChatRoom> findByIdWithMembersAndChats(@Param("chatRoomId") Long chatRoomId);
 
     @Query("""
-        select new com.ltalk.web.chatroom.dto.response.ChatViewDto(
-            c.id,
-            cr.id,
-            m.nickName,
-            c.message,
-            c.createdAt
-        )
-        from Chat c
-        join c.chatRoom cr
-        join c.sender s
-        join s.member m
-        where cr.id = :chatRoomId
-        order by c.createdAt asc, c.id asc
-    """)
-    List<ChatViewDto> findChatViewsByChatRoomId(@Param("chatRoomId") Long chatRoomId);
+    select new com.ltalk.web.chatroom.dto.response.ChatViewDto(
+        c.id,
+        cr.id,
+        m.nickName,
+        c.message,
+        c.createdAt
+    )
+    from Chat c
+    join c.chatRoom cr
+    join c.sender s
+    join s.member m
+    where cr.id = :chatRoomId
+    order by c.createdAt desc, c.id desc
+""")
+    Page<ChatViewDto> findChatViewsByChatRoomId(
+            @Param("chatRoomId") Long chatRoomId,
+            Pageable pageable
+    );
+
 
     @Query("""
         select new com.ltalk.web.chatroom.dto.response.ChatRoomMemberDto(
