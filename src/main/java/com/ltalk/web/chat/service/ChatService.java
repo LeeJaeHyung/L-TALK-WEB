@@ -2,13 +2,20 @@ package com.ltalk.web.chat.service;
 
 import com.ltalk.web.chat.domain.Chat;
 import com.ltalk.web.chat.dto.request.ChatCreateRequest;
+import com.ltalk.web.chat.dto.response.ChatSliceResponse;
 import com.ltalk.web.chat.repository.ChatRepository;
 import com.ltalk.web.chatroom.domain.ChatRoom;
 import com.ltalk.web.chatroom.domain.ChatRoomMember;
+import com.ltalk.web.chatroom.dto.response.ChatViewDto;
 import com.ltalk.web.chatroom.repository.ChatRoomMemberRepository;
 import com.ltalk.web.chatroom.repository.ChatRoomRepository;
 import jakarta.transaction.Transactional;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 public class ChatService {
@@ -39,5 +46,32 @@ public class ChatService {
         chatRepository.save(chat);
         sender.setReadChatId(chat.getId());
         chatRoomMemberRepository.save(sender);
+    }
+
+    public ChatSliceResponse getChatSlice(Long roomId, LocalDateTime cursorAt, Long cursorId, int size) {
+        List<ChatViewDto> chats;
+
+        Pageable pageable = PageRequest.of(0, size + 1); // hasNext 판별용 +1개
+
+        if (cursorAt == null || cursorId == null) {
+            // 커서 없으면 최신 50개
+            chats = chatRepository.findLatestChats(roomId, pageable);
+        } else {
+            // 커서 기반 과거 데이터 조회
+            chats = chatRepository.findOlderThanCursor(roomId, cursorAt, cursorId, pageable);
+        }
+
+        boolean hasNext = chats.size() > size;
+        if (hasNext) chats = chats.subList(0, size);
+
+        ChatViewDto last = chats.isEmpty() ? null : chats.get(chats.size() - 1);
+
+        return new ChatSliceResponse(
+                chats,
+                hasNext,
+                last != null ? last.createdAt() : null,
+                last != null ? last.id() : null
+        );
+
     }
 }

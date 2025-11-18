@@ -3,6 +3,7 @@ package com.ltalk.web.chat.controller;
 import com.ltalk.web.chat.dto.ChatMessage;
 import com.ltalk.web.chat.dto.request.ChatCreateRequest;
 import com.ltalk.web.chat.dto.response.ChatDto;
+import com.ltalk.web.chat.dto.response.ChatSliceResponse;
 import com.ltalk.web.chat.service.ChatService;
 import com.ltalk.web.global.dto.LoginMemberDto;
 import jakarta.servlet.http.HttpServletRequest;
@@ -99,5 +100,16 @@ public class ChatController {
             // memberId가 숫자 문자열이 아니라면 여기서 매핑 규칙에 맞게 처리
             return 0L;
         }
+    }
+
+    @GetMapping("/{chatRoomId}/chats")
+    public ChatSliceResponse getChats(
+            @PathVariable Long chatRoomId,
+            @RequestParam(required = false) LocalDateTime cursorAt,
+            @RequestParam(required = false) Long cursorId,
+            @RequestParam(defaultValue = "50") int size
+    ) {
+        System.out.println("컨트롤러 진입");
+        return chatService.getChatSlice(chatRoomId, cursorAt, cursorId, size);
     }
 }

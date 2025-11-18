@@ -83,7 +83,11 @@ const render = (rooms) => {
         const moreChip = more > 0 ? `<span class="chip">+${more}</span>` : '';
 
         return `
-      <div class="row" role="button" tabindex="0" data-id="${esc(r.id)}" aria-label="채팅방 ${esc(r.name)} 열기">
+      <div class="row room-item"
+           role="button" tabindex="0"
+           data-room-id="${esc(r.id)}"
+           data-room-name="${esc(r.name || '이름 없는 방')}"
+           aria-label="채팅방 ${esc(r.name)} 열기">
         <div class="avatars">${avatarHtml}</div>
         <div class="body">
           <div class="name">
@@ -106,19 +110,7 @@ const render = (rooms) => {
     $list.hidden = false;
     $list.innerHTML = html;
 
-    // 클릭 이동
-    $list.querySelectorAll('.row').forEach(row => {
-        row.addEventListener('click', () => {
-            const id = row.getAttribute('data-id');
-            window.location.href = `/chat/${id}`;
-        });
-        row.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                row.click();
-            }
-        });
-    });
+    // (수정 2) 페이지 이동 제거: 더블클릭으로 모달을 엽니다. 별도 click 이동 핸들러 없음.
 };
 
 const setLoading = () => {
@@ -325,3 +317,211 @@ const applyIncomingMessage = (roomId, dto) => {
 
 // ===== Boot =====
 load();
+
+// =====================
+// 채팅 모달 상태/DOM
+// =====================
+const $chatModal = document.getElementById('chatModal');
+const $chatModalClose = document.getElementById('chatModalClose');
+const $chatModalRoomName = document.getElementById('chatModalRoomName');
+const $chatScroll = document.getElementById('chatScroll');
+const $chatList = document.getElementById('chatList');
+const $chatLoadingTop = document.getElementById('chatLoadingTop');
+
+// 모달 내부 상태 (커서 기반)
+const CHAT_STATE = {
+    roomId: null,
+    roomName: null,
+    items: [],            // 화면 표시용(오름차순: 과거 -> 최신)
+    hasNext: true,
+    nextCursorAt: null,
+    nextCursorId: null,
+    loadingTop: false,
+    initialized: false
+};
+
+const fmtLocal = (v) => {
+    if (!v) return '';
+    // 서버에서 ISO 형식이라고 가정. 'YYYY-MM-DDTHH:mm:ss' 형태
+    const d = new Date(String(v).replace(' ', 'T'));
+    if (Number.isNaN(d.getTime())) return String(v);
+    // 사용자가 한국이라 가정 (Asia/Seoul)
+    return d.toLocaleString('ko-KR', { hour12: false });
+};
+
+// =====================
+// 모달 열고/닫기
+// =====================
+function openChatModal(roomId, roomName) {
+    // 상태 초기화
+    CHAT_STATE.roomId = roomId;
+    CHAT_STATE.roomName = roomName || `방 #${roomId}`;
+    CHAT_STATE.items = [];
+    CHAT_STATE.hasNext = true;
+    CHAT_STATE.nextCursorAt = null;
+    CHAT_STATE.nextCursorId = null;
+    CHAT_STATE.loadingTop = false;
+    CHAT_STATE.initialized = false;
+
+    $chatModalRoomName.textContent = CHAT_STATE.roomName;
+    $chatList.innerHTML = '';
+
+    // 모달 표시
+    $chatModal.hidden = false;
+
+    // 최초 로딩
+    loadInitialChats().catch(console.error);
+}
+
+function closeChatModal() {
+    $chatModal.hidden = true;
+    // 필요 시 구독 해제/정리 로직 추가 가능
+}
+
+$chatModalClose?.addEventListener('click', closeChatModal);
+// 백드롭 클릭 닫기
+$chatModal.addEventListener('click', (e) => {
+    if (e.target?.dataset?.close) {
+        closeChatModal();
+    }
+});
+
+// =====================
+// 데이터 호출
+// =====================
+// GET /chatrooms/{chatRoomId}/chats?size=50 [&cursorAt=...&cursorId=...]
+async function fetchChatSlice({ roomId, cursorAt, cursorId, size = 50 }) {
+    const url = new URL(`/chatrooms/${roomId}/chats`, location.origin);
+    url.searchParams.set('size', String(size));
+    if (cursorAt) url.searchParams.set('cursorAt', cursorAt);
+    if (cursorId) url.searchParams.set('cursorId', String(cursorId));
+
+    const res = await fetch(url.toString(), { headers: { 'Accept': 'application/json' } });
+    if (!res.ok) throw new Error(`채팅 조회 실패: ${res.status}`);
+    return await res.json(); // { content, hasNext, nextCursorAt, nextCursorId }
+}
+
+// 최초 로딩: 최신 50개 → 화면에는 오름차순으로 그리고 맨 아래로 스크롤
+async function loadInitialChats() {
+    const roomId = CHAT_STATE.roomId;
+    const data = await fetchChatSlice({ roomId, size: 50 });
+
+    // 서버는 최신 내림차순으로 준다고 가정 → 오름차순으로 뒤집어서 렌더
+    const arr = Array.isArray(data.content) ? [...data.content].reverse() : [];
+    CHAT_STATE.items = arr;
+    CHAT_STATE.hasNext = !!data.hasNext;
+    CHAT_STATE.nextCursorAt = data.nextCursorAt || null;
+    CHAT_STATE.nextCursorId = data.nextCursorId || null;
+    CHAT_STATE.initialized = true;
+
+    renderChatListInitial(arr);
+    scrollToBottom($chatScroll);
+}
+
+// 과거 더 가져오기: 현재 리스트 맨 위 메시지 기준으로 prepend
+async function loadOlderChats() {
+    if (!CHAT_STATE.hasNext || CHAT_STATE.loadingTop || !CHAT_STATE.initialized) return;
+
+    CHAT_STATE.loadingTop = true;
+    $chatLoadingTop.hidden = false;
+
+    const roomId = CHAT_STATE.roomId;
+    const data = await fetchChatSlice({
+        roomId,
+        cursorAt: CHAT_STATE.nextCursorAt,
+        cursorId: CHAT_STATE.nextCursorId,
+        size: 50
+    });
+
+    const beforeHeight = $chatScroll.scrollHeight;
+
+    // 서버는 최신 내림차순 → 오름차순으로 뒤집어서 '앞쪽'에 붙임
+    const newArr = Array.isArray(data.content) ? [...data.content].reverse() : [];
+    prependChatItems(newArr);
+
+    CHAT_STATE.hasNext = !!data.hasNext;
+    CHAT_STATE.nextCursorAt = data.nextCursorAt || null;
+    CHAT_STATE.nextCursorId = data.nextCursorId || null;
+
+    // 스크롤 점프 방지
+    const afterHeight = $chatScroll.scrollHeight;
+    $chatScroll.scrollTop = afterHeight - beforeHeight;
+
+    $chatLoadingTop.hidden = true;
+    CHAT_STATE.loadingTop = false;
+}
+
+// =====================
+// 렌더링
+// =====================
+function renderChatListInitial(list) {
+    const frag = document.createDocumentFragment();
+    for (const c of list) {
+        frag.appendChild(renderChatItem(c));
+    }
+    $chatList.innerHTML = '';
+    $chatList.appendChild(frag);
+}
+
+function prependChatItems(list) {
+    if (!list?.length) return;
+    // 상태 먼저 반영
+    CHAT_STATE.items = [...list, ...CHAT_STATE.items];
+
+    // DOM prepend
+    for (let i = list.length - 1; i >= 0; i--) {
+        const node = renderChatItem(list[i]);
+        $chatList.insertBefore(node, $chatList.firstChild);
+    }
+}
+
+function appendChatItem(item) {
+    CHAT_STATE.items.push(item);
+    $chatList.appendChild(renderChatItem(item));
+}
+
+function renderChatItem(c) {
+    const div = document.createElement('div');
+    div.className = 'chatmsg';
+    div.innerHTML = `
+    <div class="chatmsg__meta">
+      <span class="chatmsg__nick">${esc(c.senderNickname ?? '')}</span>
+      <span class="chatmsg__time">${fmtLocal(c.createdAt)}</span>
+    </div>
+    <div class="chatmsg__text">${esc(c.message ?? '')}</div>
+  `;
+    return div;
+}
+
+function scrollToBottom(scroller) {
+    scroller.scrollTop = scroller.scrollHeight;
+}
+
+function isAtTop(scroller) {
+    return scroller.scrollTop <= 0;
+}
+
+// =====================
+// 스크롤 이벤트 (위 끝에서 과거 로딩)
+// =====================
+$chatScroll.addEventListener('scroll', () => {
+    if (isAtTop($chatScroll)) {
+        loadOlderChats().catch(console.error);
+    }
+});
+
+// =====================
+// 목록 더블클릭 → 모달 열기
+// =====================
+// 리스트 전체에 위임 (기존 #list를 사용)
+document.getElementById('list')?.addEventListener('dblclick', (e) => {
+    const item = e.target.closest('.room-item');
+    if (!item) return;
+
+    // data-* 속성에서 roomId/name 추출 (렌더 시 세팅되어 있어야 함)
+    const roomId = item.dataset.roomId || item.getAttribute('data-room-id');
+    const roomName = item.dataset.roomName || item.getAttribute('data-room-name');
+    if (!roomId) return;
+
+    openChatModal(Number(roomId), roomName);
+});
