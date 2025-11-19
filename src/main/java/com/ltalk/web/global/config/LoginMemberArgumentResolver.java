@@ -1,10 +1,8 @@
 package com.ltalk.web.global.config;
 
 import com.ltalk.web.global.dto.LoginMemberDto;
-import com.ltalk.web.global.service.RedisLoginTokenService;
 import com.ltalk.web.member.domain.Member;
 import com.ltalk.web.member.repository.MemberRepository;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.MethodParameter;

@@ -12,4 +12,5 @@ public class MemberPatchRequest {
     String password;
     String email;
     String phoneNumber;
+    String language;
 }

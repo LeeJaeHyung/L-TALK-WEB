@@ -16,6 +16,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
+import java.util.Optional;
 import java.util.UUID;
 
 import static com.ltalk.web.global.config.PasswordEncoder.*;
@@ -49,7 +50,8 @@ public class MemberService {
     }
 
     public LoginResult login(LoginRequest request) {
-        Member member = memberRepository.findByUserName(request.getUserName())
+        System.out.println("-> LoginRequest : "+request.getUsername()+request.getPassword());
+        Member member = memberRepository.findByUserName(request.getUsername())
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다"));
 
         String hashedPassword = member.getPassword();
@@ -66,7 +68,8 @@ public class MemberService {
                     member.getNickName(),
                     member.getEmail(),
                     member.getPhoneNumber(),
-                    member.getUserRole().name()
+                    member.getUserRole().name(),
+                    member.getLanguage()
             );
 
             redisLoginTokenService.save(token, dto);// Duration 설정 포함됨
@@ -95,7 +98,7 @@ public class MemberService {
         if(memberPatchRequest.getPassword()!=null){//비밀번호 해쉬 처리 -> 이부분 어디에 위치하는게 좋은지 모르겠음 update()에 위치해야 할지 어느곳이 좋은지 모르겠음
             memberPatchRequest.setPassword(encode(memberPatchRequest.getPassword(), targetMember.getSalt()));
         }
-        targetMember.update(memberPatchRequest.getNickname(),memberPatchRequest.getPassword(), memberPatchRequest.getEmail(), memberPatchRequest.getPhoneNumber());
+        targetMember.update(memberPatchRequest.getNickname(),memberPatchRequest.getPassword(), memberPatchRequest.getEmail(), memberPatchRequest.getPhoneNumber(),memberPatchRequest.getLanguage());
         return targetMember;
     }
 
@@ -120,5 +123,10 @@ public class MemberService {
             }
         }
         redisLoginTokenService.remove(token, member.getId());
+    }
+
+    public Member getMemberFromId(Long id){
+        Optional<Member> member = memberRepository.findById(id);
+        return member.orElseThrow(()-> new IllegalArgumentException("존재 하지 않는 사용자 입니다."));
     }
 }

@@ -1,11 +1,14 @@
 package com.ltalk.web.chat.controller;
 
+import com.ltalk.web.api.TranslatorService;
 import com.ltalk.web.chat.dto.ChatMessage;
 import com.ltalk.web.chat.dto.request.ChatCreateRequest;
 import com.ltalk.web.chat.dto.response.ChatDto;
 import com.ltalk.web.chat.dto.response.ChatSliceResponse;
 import com.ltalk.web.chat.service.ChatService;
 import com.ltalk.web.global.dto.LoginMemberDto;
+import com.ltalk.web.member.domain.Member;
+import com.ltalk.web.member.service.MemberService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,11 +27,15 @@ public class ChatController {
 
     private final ChatService chatService;
     private final SimpMessagingTemplate template;
+    private final TranslatorService translatorService;
+    private final MemberService memberService;
 
 
-    public ChatController(ChatService chatService, SimpMessagingTemplate template) {
+    public ChatController(ChatService chatService, SimpMessagingTemplate template, TranslatorService translatorService, MemberService memberService) {
         this.chatService = chatService;
+        this.translatorService = translatorService;
         this.template = template;
+        this.memberService = memberService;
     }
     @PostMapping("/{chatRoomId}/chats")
     public ResponseEntity<Void> createChat(HttpServletRequest request, @PathVariable Long chatRoomId,
@@ -73,7 +80,24 @@ public class ChatController {
         System.out.println(principal.getName());
 
         Long senderId = resolveSenderId(principal);     // ← 여기서 인증객체에서 추출
+        Member member = memberService.getMemberFromId(senderId);
+        String memberLanguage = member.getLanguage();
+        String to;
+        String from;
 
+        if (memberLanguage.isEmpty()){
+            memberLanguage = "ko";
+        }
+        System.out.println("-->>>>>멤버언어"+memberLanguage);
+
+        if(memberLanguage.equals("ko")){
+            to = "zh-Hant";
+            from = "ko";
+        }else{
+            to = "ko";
+            from  = "zh-Hant";
+        }
+        System.out.println(from+to);
         ChatDto dto = new ChatDto(
                 null,                                   // id: DB 저장 시 채우기
                 senderId,
@@ -84,8 +108,22 @@ public class ChatController {
         System.out.println("dto : "+dto.toString());
 
         chatService.createChat(roomId, req, senderId);
+        String transCh = translatorService.translate(req.getMessage(), from, to);
         System.out.println("insert 완료");
+        ChatCreateRequest request = new ChatCreateRequest();
+        request.setSenderId(req.getSenderId());
+        request.setMessage(transCh);
+
+        chatService.createChat(roomId, request, senderId);
+        ChatDto transChatDto = new ChatDto(
+                null,                                   // id: DB 저장 시 채우기
+                senderId,
+                roomId,
+                transCh,                          // chatMessage = message 와 동일 사용
+                LocalDateTime.now()
+        );
         template.convertAndSend("/topic/chatrooms/" + roomId + "/chats", dto);
+        template.convertAndSend("/topic/chatrooms/" + roomId + "/chats", transChatDto);
 
     }
 

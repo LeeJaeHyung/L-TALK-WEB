@@ -36,6 +36,9 @@ public class Member {
     @Column(nullable = false)
     private String salt;
 
+    @Column(nullable = false)
+    private String language;
+
     @Column(nullable = false, unique = true)
     private String email;
 
@@ -53,7 +56,7 @@ public class Member {
     @Enumerated(EnumType.STRING)
     private UserRole userRole;
 
-    public Member(String userName, String nickName, String password, String email, String phoneNumber, UserRole userRole) {
+    public Member(String userName, String nickName, String password, String email, String phoneNumber, UserRole userRole, String language) {
         this.userName = userName;
         this.nickName = nickName;
         this.password = password;
@@ -61,6 +64,7 @@ public class Member {
         this.phoneNumber = phoneNumber;
         this.userRole = userRole;
         this.salt = "";
+        this.language = language;
     }
 
     public Member(SignUpRequest request, String salt) {
@@ -71,13 +75,15 @@ public class Member {
         this.email = request.getEmail();
         this.phoneNumber = request.getPhoneNumber();
         this.userRole = UserRole.USER;
+        this.language = request.getLanguage();
     }
 
-    public void update(String nickName, String password, String email, String phoneNumber) {
+    public void update(String nickName, String password, String email, String phoneNumber, String language) {
         if (nickName != null) this.nickName = nickName;
         if (password != null) this.password = password;
         if (email != null) this.email = email;
         if (phoneNumber != null) this.phoneNumber = phoneNumber;
+        if (language != null) this.language = language;
     }
 
     public void softDelete() {
