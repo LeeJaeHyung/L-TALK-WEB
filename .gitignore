@@ -35,3 +35,9 @@ out/
 
 ### VS Code ###
 .vscode/
+
+# 로컬 프로퍼티 (git에 절대 올리면 안 됨)
+src/main/resources/application-local.properties
+
+# application.properties도 민감하면 아래처럼 제외 가능
+src/main/resources/application.properties
