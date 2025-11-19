@@ -15,6 +15,8 @@ public class TranslatorController {
      * GET /api/translate?text=안녕하세요&to=en
      * GET /api/translate?text=你好&from=zh-Hans&to=ko
      */
+
+    //test
     @GetMapping
     public String translate(
             @RequestParam String text,
